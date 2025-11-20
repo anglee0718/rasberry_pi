@@ -119,3 +119,29 @@ ERROR: *** no cameras available ***
 ```
   https://github.com/raspberrypi/picamera2/blob/main/examples/capture_png.py
 ```
+
+#언어별 확장자
+* c언어
+```
+[변수명].c
+```
+
+* c++ 언어
+```
+[변수명].cpp
+```
+
+* java 언어
+```
+[변수명].java
+```
+
+* javascript 언어
+```
+[변수명].js
+```
+
+* c#언어
+```
+[변수명].cs
+```
