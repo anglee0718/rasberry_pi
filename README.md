@@ -283,3 +283,74 @@ if __name__ == "__main__":
     root.mainloop()
 
 ```
+```
+#sync...코드
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+import time
+import requests
+import sys
+from requests.auth import HTTPBasicAuth
+from xml.etree import ElementTree as ET
+#http://localhost:8080/remote.php/dav/files/anglee0718 or http://localhost:8080/remote.php/webdav/frame_photos/
+WEBDAV_URL = "http://localhost:8080/remote.php/dav/files/anglee0718/frame_photos/"
+USERNAME = "anglee0718"
+PASSWORD = "gZNCE-XRPw7-A9yQD-ciLZP-48snm"
+
+headers = {"Depth": "1"}
+
+LOCAL_DIR = "/home/pi/nc_photos"
+
+
+def download_photos():
+    try:
+        response = requests.request("PROPFIND", WEBDAV_URL, auth=HTTPBasicAuth(USERNAME, PASSWORD))
+
+        if response.status_code != 207:
+            print("PROPFIND 실패:", response.status_code)
+            return
+
+        tree = ET.fromstring(response.content)
+        namespace = {'d': 'DAV:'}
+
+        for elem in tree.findall('.//d:href', namespace):
+            file_path = elem.text
+            file_name = os.path.basename(file_path)
+
+            if not file_name.lower().endswith((".jpg", ".jpeg", ".png")):
+                continue
+
+            local_file = os.path.join(LOCAL_DIR, file_name)
+
+            if os.path.exists(local_file):
+                continue
+
+            file_url = WEBDAV_URL + file_name
+
+            r = requests.get(file_url, auth=HTTPBasicAuth(USERNAME, PASSWORD))
+            if r.status_code == 200:
+                with open(local_file, "wb") as f:
+                    f.write(r.content)
+                print("Downloaded:", file_name)
+
+    except Exception as e:
+        print("Error:", e)
+
+
+def main_loop():
+    if not os.path.exists(LOCAL_DIR):
+        os.makedirs(LOCAL_DIR)
+
+    while True:
+        download_photos()
+        time.sleep(60)
+
+
+if __name__ == "__main__":
+    if "--once" in sys.argv:
+        download_photos()
+    else:
+        main_loop()
+```
