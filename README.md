@@ -145,3 +145,8 @@ ERROR: *** no cameras available ***
 ```
 [변수명].cs
 ```
+
+# 넥스트클라우드 앱 비번
+```
+gZNCE-XRPw7-A9yQD-ciLZP-48snm
+```
