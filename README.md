@@ -150,3 +150,136 @@ ERROR: *** no cameras available ***
 ```
 gZNCE-XRPw7-A9yQD-ciLZP-48snm
 ```
+```
+import os
+import random
+import time
+import tkinter as tk
+from PIL import Image, ImageTk
+
+PHOTO_DIR = "/home/pi/frame_photos"
+SLIDE_SECONDS = 5
+
+ADMIN_PASSWORD = "0718"  # 바꾸고 싶으면 여기 변경
+
+
+class DigitalFrame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Digital Frame")
+        self.root.attributes("-fullscreen", True)
+        self.root.configure(bg="black")
+
+        self.label = tk.Label(root, bg="black")
+        self.label.pack(fill="both", expand=True)
+
+        self.photos = []
+        self.current_index = 0
+        self.running = True
+
+        self.root.bind("<Escape>", self.open_admin_mode)
+
+        self.load_photos()
+        self.show_next_photo()
+
+    def load_photos(self):
+        if not os.path.exists(PHOTO_DIR):
+            os.makedirs(PHOTO_DIR)
+
+        self.photos = [
+            os.path.join(PHOTO_DIR, f)
+            for f in os.listdir(PHOTO_DIR)
+            if f.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp"))
+        ]
+
+        random.shuffle(self.photos)
+
+    def show_next_photo(self):
+        if not self.running:
+            return
+
+        if not self.photos:
+            self.label.config(
+                text="사진이 없습니다.\nNextcloud 동기화를 확인하세요.",
+                fg="white",
+                font=("Arial", 40),
+            )
+            self.root.after(3000, self.show_next_photo)
+            return
+
+        photo_path = self.photos[self.current_index]
+
+        try:
+            img = Image.open(photo_path)
+            screen_w = self.root.winfo_screenwidth()
+            screen_h = self.root.winfo_screenheight()
+
+            img.thumbnail((screen_w, screen_h))
+            tk_img = ImageTk.PhotoImage(img)
+
+            self.label.config(image=tk_img, text="")
+            self.label.image = tk_img
+
+        except Exception as e:
+            print("이미지 오류:", e)
+
+        self.current_index = (self.current_index + 1) % len(self.photos)
+        self.root.after(SLIDE_SECONDS * 1000, self.show_next_photo)
+
+    def open_admin_mode(self, event=None):
+        self.running = False
+
+        admin = tk.Toplevel(self.root)
+        admin.title("관리자 모드")
+        admin.geometry("400x300")
+        admin.configure(bg="gray20")
+
+        tk.Label(admin, text="관리자 비밀번호:", fg="white", bg="gray20", font=("Arial", 14)).pack(pady=10)
+        pw_entry = tk.Entry(admin, show="*", font=("Arial", 14))
+        pw_entry.pack(pady=10)
+
+        msg = tk.Label(admin, text="", fg="red", bg="gray20", font=("Arial", 12))
+        msg.pack()
+
+        def check_pw():
+            if pw_entry.get() == ADMIN_PASSWORD:
+                msg.config(text="성공!", fg="lime")
+                show_admin_menu()
+            else:
+                msg.config(text="비밀번호 틀림", fg="red")
+
+        def show_admin_menu():
+            for widget in admin.winfo_children():
+                widget.destroy()
+
+            tk.Label(admin, text="관리자 메뉴", fg="white", bg="gray20", font=("Arial", 16)).pack(pady=10)
+
+            def sync_now():
+                os.system("/home/pi/sync_photos.sh &")
+
+            def reload_photos():
+                self.load_photos()
+                self.current_index = 0
+
+            def exit_admin():
+                admin.destroy()
+                self.running = True
+                self.show_next_photo()
+
+            def shutdown_pi():
+                os.system("sudo shutdown -h now")
+
+            tk.Button(admin, text="사진 동기화 실행", font=("Arial", 14), command=sync_now).pack(pady=5)
+            tk.Button(admin, text="사진 다시 불러오기", font=("Arial", 14), command=reload_photos).pack(pady=5)
+            tk.Button(admin, text="라즈베리파이 종료", font=("Arial", 14), command=shutdown_pi).pack(pady=5)
+            tk.Button(admin, text="닫기", font=("Arial", 14), command=exit_admin).pack(pady=5)
+
+        tk.Button(admin, text="확인", font=("Arial", 14), command=check_pw).pack(pady=10)
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DigitalFrame(root)
+    root.mainloop()
+
+```
